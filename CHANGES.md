@@ -1,13 +1,16 @@
 
 # Changelog
 
-## v2026.8.30
+## v2026.9.23
 
-- `Lattice.find_mapping` prefers a proper rotation (`det R > 0`) over a
-  reflection when both exist. The first length/angle match was sometimes
-  improper even on a self-map (8 proper + 8 improper maps on the
-  materialsproject/pymatgen#4457 cell). An improper map is still returned
-  when no proper map exists.
+- PR #144 `Lattice.find_mapping` prefers a proper rotation (`det R > 0`) over a reflection when both exist. The first length/angle match from `find_all_mappings` was sometimes improper even on a self-map (8 proper + 8 improper maps on the materialsproject/pymatgen#4457 cell). An improper map is still returned when no proper map exists (true enantiomorphs); `find_all_mappings` is unchanged. (by @shaneraphel)
+- PR #145 `PotcarSingle` parses POTCAR strings with CRLF line endings instead of raising `IndexError` from `is_valid`: the `END of PSCTR-controll parameters` delimiter is now matched with an optional `\r`. `from_file` was unaffected because text-mode reads normalize newlines; only the string constructor surfaced the error. Closes the `IndexError` variant of materialsproject/pymatgen#4467. (by @Yi-111-a)
+- PR #137 `AseAtomsAdaptor.get_atoms` and `Structure.to_ase_atoms()` again raise `PackageNotFoundError("AseAtomsAdaptor requires the ASE package. Use `pip install ase`")` when ASE is missing, instead of failing deep inside with `AttributeError: 'MSONAtoms' object has no attribute 'set_array'`. The fail-fast guard had been dropped in Feb 2026 when the stub `Atoms.__init__` became a no-op. (by @shyuep)
+- PR #140 `moyopy>=0.17` is added to the `optional` extra so `Structure.get_symmetry_dataset(backend="moyopy")` is exercised in CI. A new parametrized test sweeps all 230 space groups and asserts spglib/moyopy agreement on `number`, `wyckoffs`, `site_symmetry_symbols` and `orbits`; older moyopy releases (0.3.0, 0.16.0) disagree with spglib on Wyckoff letters for a few groups, hence the floor. Known convention differences (`international`, `std_origin_shift`, `hall_number`) are documented and not asserted. (by @Yi-111-a)
+- PR #138 seekpath-backed k-path tests skip via a runtime probe (`pymatgen.util.testing.seekpath_unusable_reason()`) instead of a stale platform/Python-version gate that had silently disabled them on every CI job. `tests/io/pwmat/test_inputs.py` restores the real `kpath` modules after simulating seekpath's absence so it no longer poisons later tests under xdist. (by @Yi-111-a)
+- PR #141 Add the `analysis/bond_dissociation/pc_frag1_mg.json` and `pc_mg.json` `MoleculeGraph` reference files missing from the in-tree `test-files/` since the repo split; needed by the openbabel-gated `TestMoleculeGraph::test_construction`. (by @Yi-111-a)
+
+## v2026.8.30
 
 - PR #134 **Breaking:** `PointGroupAnalyzer` no longer records the identity (a 360° rotation, valid about any axis) as a rotation axis in `_check_rot_sym`. Previously this phantom entry routed molecules whose only rotational symmetry is a single C2 perpendicular to the unique inertial axis (e.g. tetramethylhydrazine) into the dihedral branch, so `sch_symbol` reported `D2` while `get_symmetry_operations()` returned only 2 operations. Such molecules are now correctly reported as `C2`; the perpendicular-C2 search in `_proc_sym_top` now always runs. `get_symmetry_operations()` and `get_pointgroup()` are unaffected. (by @HiroYokoyama)
 - PR #94 **Breaking (deprecation):** `Orbital.dx2` is renamed to `Orbital.dx2_y2` (enum value `8` unchanged), fixing materialsproject/pymatgen#4588. Two-phase transition: until 2027-08-17, `Orbital.dx2` / `Orbital["dx2"]` still resolve with a `DeprecationWarning`, `CompleteDos.as_dict()` / `CompleteCohp.as_dict()` keep writing the legacy `dx2` key, and readers accept both `dx2` and `dx2_y2`; from 2027-08-17, `dx2_y2` is serialized and the legacy alias/read paths are removed. Existing serialized data needs no conversion. (by @DanielYang59)
